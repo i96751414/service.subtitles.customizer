@@ -3,21 +3,29 @@ import re
 import sys
 import xbmc
 import json
+import locale
 import xbmcgui
+import encodings
 import xbmcaddon
 import xbmcplugin
 from lib.pysubs2.formats import FILE_EXTENSION_TO_FORMAT_IDENTIFIER
 
 try:
-    from urllib.parse import parse_qsl, unquote
+    from urllib.parse import parse_qsl, unquote, urlencode
 except ImportError:
     # noinspection PyUnresolvedReferences
     from urlparse import parse_qsl, unquote
+    # noinspection PyUnresolvedReferences
+    from urllib import urlencode
 
 ADDON = xbmcaddon.Addon()
+
 SUBTITLES_EXT = FILE_EXTENSION_TO_FORMAT_IDENTIFIER.keys()
 EXT_RE = re.compile("({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
 LANG_RE = re.compile("[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
+
+HEADER = "[" + ADDON.getAddonInfo("name") + "] original_sub <{}>"
+HEADER_RE = re.compile("\[{}\] original_sub <(.+?)>".format(ADDON.getAddonInfo("name")))
 
 
 def translate(text):
@@ -29,7 +37,7 @@ def get_active_players():
     return json.loads(xbmc.executeJSONRPC(command))["result"]
 
 
-def is_subtitle_enabled():
+def get_subtitle_details():
     player_id = None
     active_players = get_active_players()
     for data in active_players:
@@ -38,13 +46,14 @@ def is_subtitle_enabled():
             break
 
     if player_id is None:
-        return False
+        return None
 
     command = ('{{"jsonrpc":"2.0","method":"Player.GetProperties",'
-               '"params":{{"playerid":{},"properties":["subtitleenabled"]}},'
+               '"params":{{"playerid":{},"properties":["subtitleenabled","currentsubtitle"]}},'
                '"id":1}}').format(player_id)
 
-    return json.loads(xbmc.executeJSONRPC(command))["result"]["subtitleenabled"]
+    data = json.loads(xbmc.executeJSONRPC(command))["result"]
+    return data["currentsubtitle"] if data["subtitleenabled"] else None
 
 
 def get_setting(name):
@@ -61,8 +70,8 @@ def get_setting(name):
 
 
 def get_current_subtitle():
-    if not is_subtitle_enabled():
-        return None
+    if get_subtitle_details() is None:
+        return None, None
 
     if get_setting("subtitles.storagemode") == 1:
         subtitle_path = get_setting("subtitles.custompath")
@@ -98,12 +107,47 @@ def get_current_subtitle():
                 m_time = _m_time
                 index = i
 
-        return subtitles[index]
-    return None
+        return subtitles[index], subtitle_lang
+    return None, subtitle_lang
 
 
-def list_subtitles():
-    pass
+def find_encoding_by_country(country):
+    local_name = locale.locale_alias.get(country, None)
+    if local_name:
+        alias = local_name.split(".")[-1].lower()
+        codec = encodings.search_function(alias)
+        if codec:
+            return codec.name
+
+    return locale.getpreferredencoding()
+
+
+def add_subtitle(handle, action, path, label, language):
+    list_item = xbmcgui.ListItem(
+        label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME),
+        label2=label,
+        iconImage="0",
+        thumbnailImage=xbmc.convertLanguage(language, xbmc.ISO_639_1),
+    )
+
+    # list_item.setProperty("sync", "false")
+    # list_item.setProperty("hearing_imp", "false")
+
+    url = "plugin://{}/?{}".format(
+        ADDON.getAddonInfo("id"),
+        urlencode({"action": action, "path": path}))
+
+    xbmcplugin.addDirectoryItem(
+        handle=handle,
+        url=url,
+        listitem=list_item,
+        isFolder=False,
+    )
+
+
+def list_subtitles(handle):
+    path, lang = get_current_subtitle()
+    add_subtitle(handle, "test", "path", path, "pt")
 
 
 def run():
@@ -118,7 +162,9 @@ def run():
         xbmcgui.Dialog().notification(translate(32000), translate(32001))
 
     params = dict(parse_qsl(sys.argv[2][1:]))
-    if "action" in params and params["action"] in ["search", "manualsearch"]:
-        list_subtitles()
+    handle = int(sys.argv[1])
 
-    xbmcplugin.endOfDirectory(int(sys.argv[1]))
+    if "action" in params and params["action"] in ["search", "manualsearch"]:
+        list_subtitles(handle)
+
+    xbmcplugin.endOfDirectory(handle)
