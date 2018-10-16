@@ -147,9 +147,8 @@ class Customizer(object):
         # list_item.setProperty("sync", "false")
         # list_item.setProperty("hearing_imp", "false")
 
-        url = "plugin://{}/?{}".format(
-            self._id,
-            urlencode({"action": action, "path": path}))
+        url = "plugin://{}/?{}".format(self._id, urlencode({
+            "action": action, "path": path, "language": language}))
 
         xbmcplugin.addDirectoryItem(
             handle=self._handle,
