@@ -187,6 +187,10 @@ class Customizer(object):
         )
 
     def _convert_subtitle(self, path):
+        dialog = xbmcgui.Dialog()
+        if dialog.yesno(self._translate(32003), self._translate(32004)):
+            self._addon.openSettings()
+
         name, _ = os.path.splitext(os.path.basename(path))
         converted = os.path.join(self._subtitles_dir, "{}_modified_{}.ass".format(
             self._name, name))
@@ -197,8 +201,108 @@ class Customizer(object):
             xbmc.convertLanguage(lang, xbmc.ISO_639_1))
 
         subs = pysubs2.load(path, encoding, fps=fps)
+
+        subs.styles["Default"].fontname = self._font_name
+        subs.styles["Default"].fontsize = self._font_size
+        subs.styles["Default"].primarycolor = self._primary_color
+        subs.styles["Default"].secondarycolor = self._secondary_color
+        subs.styles["Default"].tertiarycolor = self._tertiary_color
+        subs.styles["Default"].outlinecolor = self._outline_color
+        subs.styles["Default"].backcolor = self._back_color
+        subs.styles["Default"].bold = False
+        subs.styles["Default"].italic = False
+        subs.styles["Default"].underline = False
+        subs.styles["Default"].strikeout = False
+        subs.styles["Default"].scalex = 100.0
+        subs.styles["Default"].scaley = 100.0
+        subs.styles["Default"].spacing = 0.0
+        subs.styles["Default"].angle = 0.0
+        subs.styles["Default"].borderstyle = self._border_style
+        subs.styles["Default"].outline = self._outline_px
+        subs.styles["Default"].shadow = self._shadow_px
+        subs.styles["Default"].alignment = self._alignment
+        subs.styles["Default"].marginl = self._margin_l
+        subs.styles["Default"].marginr = self._margin_r
+        subs.styles["Default"].marginv = self._margin_v
+        subs.styles["Default"].encoding = 1
+
         subs.save(converted, encoding, fps=fps, header_notice=self._header.format(path))
         self._download_subtitle(converted)
+
+    @property
+    def _font_name(self):
+        opt = self._addon.getSetting("font_name")
+        if opt == "1":
+            return "Teletext"
+        return "Arial"
+
+    @property
+    def _font_size(self):
+        return float(self._addon.getSetting("font_size"))
+
+    @staticmethod
+    def _get_color(color):
+        if color == "0":
+            return pysubs2.Color(0, 0, 0, 0)
+        elif color == "1":
+            return pysubs2.Color(255, 255, 255, 0)
+        elif color == "2":
+            return pysubs2.Color(255, 255, 0, 3)
+        elif color == "3":
+            return pysubs2.Color(0, 0, 255, 0)
+        return pysubs2.Color(0, 0, 0, 255)
+
+    @property
+    def _primary_color(self):
+        return self._get_color(self._addon.getSetting("primary_color"))
+
+    @property
+    def _secondary_color(self):
+        return self._get_color(self._addon.getSetting("secondary_color"))
+
+    @property
+    def _tertiary_color(self):
+        return self._get_color(self._addon.getSetting("tertiary_color"))
+
+    @property
+    def _outline_color(self):
+        return self._get_color(self._addon.getSetting("outline_color"))
+
+    @property
+    def _back_color(self):
+        return self._get_color(self._addon.getSetting("back_color"))
+
+    @property
+    def _margin_l(self):
+        return int(self._addon.getSetting("margin_l"))
+
+    @property
+    def _margin_r(self):
+        return int(self._addon.getSetting("margin_r"))
+
+    @property
+    def _margin_v(self):
+        return int(self._addon.getSetting("margin_v"))
+
+    @property
+    def _border_style(self):
+        opt = self._addon.getSetting("border_style")
+        if opt == "0":
+            return 1
+        return 3
+
+    @property
+    def _outline_px(self):
+        return float(self._addon.getSetting("outline_px"))
+
+    @property
+    def _shadow_px(self):
+        return float(self._addon.getSetting("shadow_px"))
+
+    @property
+    def _alignment(self):
+        return 3 * int(self._addon.getSetting("vertical_alignment")) + \
+               int(self._addon.getSetting("horizontal_alignment")) + 1
 
     def run(self):
         # Make sure the manual search button is disabled

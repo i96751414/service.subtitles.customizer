@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="30026">
+        <setting id="font_name" label="30000" type="enum" lvalues="Arial|Teletext" default="0"/>
+        <setting id="font_size" label="30001" type="slider" option="int" range="12,1,74" default="20"/>
+    </category>
+    <category label="30027">
+        <setting id="primary_color" label="30002" type="enum" lvalues="30006|30007|30008|30009|30010" default="1"/>
+        <setting id="secondary_color" label="30003" type="enum" lvalues="30006|30007|30008|30009|30010" default="3"/>
+        <setting id="tertiary_color" label="30031" type="enum" lvalues="30006|30007|30008|30009|30010" default="0"/>
+        <setting id="outline_color" label="30004" type="enum" lvalues="30006|30007|30008|30009|30010" default="0"/>
+        <setting id="back_color" label="30005" type="enum" lvalues="30006|30007|30008|30009|30010" default="0"/>
+    </category>
+    <category label="30028">
+        <setting id="margin_l" label="30013" type="slider" option="int" range="-30,1,30" default="10"/>
+        <setting id="margin_r" label="30014" type="slider" option="int" range="-30,1,30" default="10"/>
+        <setting id="margin_v" label="30015" type="slider" option="int" range="-30,1,30" default="10"/>
+    </category>
+    <category label="30029">
+        <setting id="border_style" label="30016" type="enum" lvalues="30011|30012" default="0"/>
+        <setting id="outline_px" label="30017" type="slider" option="int" range="0,1,20" default="2"/>
+        <setting id="shadow_px" label="30018" type="slider" option="int" range="0,1,20" default="2"/>
+    </category>
+    <category label="30030">
+        <setting id="vertical_alignment" label="30019" type="enum" lvalues="30021|30022|30023" default="0"/>
+        <setting id="horizontal_alignment" label="30020" type="enum" lvalues="30024|30022|30025" default="1"/>
+    </category>
+</settings>

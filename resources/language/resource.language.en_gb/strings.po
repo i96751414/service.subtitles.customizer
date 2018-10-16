@@ -33,3 +33,138 @@ msgid "Original subtitle"
 msgctxt "#32003"
 msgid "Customize subtitle"
 ""
+
+msgctxt "#32004"
+msgid "Do you want to modify any settings?"
+""
+
+
+# Settings
+
+msgctxt "#30000"
+msgid "Font name"
+""
+
+msgctxt "#30001"
+msgid "Font size"
+""
+
+msgctxt "#30002"
+msgid "Subtitle color"
+""
+
+msgctxt "#30003"
+msgid "Secondary color"
+""
+
+msgctxt "#30004"
+msgid "Outline color"
+""
+
+msgctxt "#30005"
+msgid "Shadow color"
+""
+
+msgctxt "#30006"
+msgid "Black"
+""
+
+msgctxt "#30007"
+msgid "White"
+""
+
+msgctxt "#30008"
+msgid "Yellow"
+""
+
+msgctxt "#30009"
+msgid "Blue"
+""
+
+msgctxt "#30010"
+msgid "No color"
+""
+
+msgctxt "#30011"
+msgid "Border"
+""
+
+msgctxt "#30012"
+msgid "Rectangle"
+""
+
+msgctxt "#30013"
+msgid "Left margin"
+""
+
+msgctxt "#30014"
+msgid "Right margin"
+""
+
+msgctxt "#30015"
+msgid "Vertical margin"
+""
+
+msgctxt "#30016"
+msgid "Border style"
+""
+
+msgctxt "#30017"
+msgid "Outline width (in pixels)"
+""
+
+msgctxt "#30018"
+msgid "Shadow depth (in pixels)"
+""
+
+msgctxt "#30019"
+msgid "Vertical alignment"
+""
+
+msgctxt "#30020"
+msgid "Horizontal alignment"
+""
+
+msgctxt "#30021"
+msgid "Bottom"
+""
+
+msgctxt "#30022"
+msgid "Center"
+""
+
+msgctxt "#30023"
+msgid "Top"
+""
+
+msgctxt "#30024"
+msgid "Left"
+""
+
+msgctxt "#30025"
+msgid "Right"
+""
+
+msgctxt "#30026"
+msgid "Font"
+""
+
+msgctxt "#30027"
+msgid "Colors"
+""
+
+msgctxt "#30028"
+msgid "Margins"
+""
+
+msgctxt "#30029"
+msgid "Border"
+""
+
+msgctxt "#30030"
+msgid "Alignment"
+""
+
+msgctxt "#30031"
+msgid "Tertiary color"
+""
