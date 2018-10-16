@@ -4,10 +4,12 @@ import sys
 import xbmc
 import json
 import locale
+import codecs
 import xbmcgui
 import encodings
 import xbmcaddon
 import xbmcplugin
+from lib import pysubs2
 from lib.pysubs2.formats import FILE_EXTENSION_TO_FORMAT_IDENTIFIER
 
 try:
@@ -18,18 +20,9 @@ except ImportError:
     # noinspection PyUnresolvedReferences
     from urllib import urlencode
 
-ADDON = xbmcaddon.Addon()
-
 SUBTITLES_EXT = FILE_EXTENSION_TO_FORMAT_IDENTIFIER.keys()
 EXT_RE = re.compile("({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
 LANG_RE = re.compile("[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
-
-HEADER = "[" + ADDON.getAddonInfo("name") + "] original_sub <{}>"
-HEADER_RE = re.compile("\[{}\] original_sub <(.+?)>".format(ADDON.getAddonInfo("name")))
-
-
-def translate(text):
-    return ADDON.getLocalizedString(text).encode("utf-8")
 
 
 def get_active_players():
@@ -122,49 +115,111 @@ def find_encoding_by_country(country):
     return locale.getpreferredencoding()
 
 
-def add_subtitle(handle, action, path, label, language):
-    list_item = xbmcgui.ListItem(
-        label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME),
-        label2=label,
-        iconImage="0",
-        thumbnailImage=xbmc.convertLanguage(language, xbmc.ISO_639_1),
-    )
+class Customizer(object):
+    def __init__(self):
+        self._addon = xbmcaddon.Addon()
+        self._name = self._addon.getAddonInfo("name")
+        self._id = self._addon.getAddonInfo("id")
 
-    # list_item.setProperty("sync", "false")
-    # list_item.setProperty("hearing_imp", "false")
+        self._header = u"[" + self._name + "] original_sub <{}>"
+        self._header_re = re.compile("\[{}\] original_sub <(.+?)>".format(self._name))
 
-    url = "plugin://{}/?{}".format(
-        ADDON.getAddonInfo("id"),
-        urlencode({"action": action, "path": path}))
+        self._subtitles_dir = os.path.normpath(os.path.join(
+            xbmc.translatePath(self._addon.getAddonInfo("profile")),
+            "subtitles"))
+        if not os.path.exists(self._subtitles_dir):
+            os.makedirs(self._subtitles_dir)
 
-    xbmcplugin.addDirectoryItem(
-        handle=handle,
-        url=url,
-        listitem=list_item,
-        isFolder=False,
-    )
+        self._handle = -1
+        self._params = {}
 
+    def _translate(self, text):
+        return self._addon.getLocalizedString(text).encode("utf-8")
 
-def list_subtitles(handle):
-    path, lang = get_current_subtitle()
-    add_subtitle(handle, "test", "path", path, "pt")
+    def _add_subtitle(self, action, path, label, language):
+        list_item = xbmcgui.ListItem(
+            label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME),
+            label2=label,
+            iconImage="0",
+            thumbnailImage=xbmc.convertLanguage(language, xbmc.ISO_639_1),
+        )
 
+        # list_item.setProperty("sync", "false")
+        # list_item.setProperty("hearing_imp", "false")
 
-def run():
-    # Make sure the manual search button is disabled
-    if xbmc.getCondVisibility("Window.IsActive(subtitlesearch)"):
-        window = xbmcgui.Window(10153)
-        window.getControl(160).setEnableCondition(
-            '!String.IsEqual(Control.GetLabel(100),"{}")'.format(
-                ADDON.getAddonInfo("name")))
+        url = "plugin://{}/?{}".format(
+            self._id,
+            urlencode({"action": action, "path": path}))
 
-    if get_setting("subtitles.overrideassfonts"):
-        xbmcgui.Dialog().notification(translate(32000), translate(32001))
+        xbmcplugin.addDirectoryItem(
+            handle=self._handle,
+            url=url,
+            listitem=list_item,
+            isFolder=False,
+        )
 
-    params = dict(parse_qsl(sys.argv[2][1:]))
-    handle = int(sys.argv[1])
+    def _list_subtitles(self):
+        path, lang = get_current_subtitle()
+        if path is None:
+            return
 
-    if "action" in params and params["action"] in ["search", "manualsearch"]:
-        list_subtitles(handle)
+        if path.endswith(".ass"):
+            with codecs.open(path, errors="ignore") as f:
+                for line in f:
+                    match = self._header_re.search(line)
+                    if match:
+                        path = match.group(1)
+                        break
 
-    xbmcplugin.endOfDirectory(handle)
+        title = xbmc.getInfoLabel("Player.Title")
+        self._add_subtitle(
+            "download", path, "{} - {}".format(title, self._translate(32002)), lang)
+        self._add_subtitle(
+            "convert", path, "{} - {}".format(title, self._translate(32003)), lang)
+
+    def _download_subtitle(self, path):
+        list_item = xbmcgui.ListItem(label=path)
+        xbmcplugin.addDirectoryItem(
+            handle=self._handle,
+            url=path,
+            listitem=list_item,
+            isFolder=False,
+        )
+
+    def _convert_subtitle(self, path):
+        name, _ = os.path.splitext(os.path.basename(path))
+        converted = os.path.join(self._subtitles_dir, "{}_modified_{}.ass".format(
+            self._name, name))
+
+        lang = xbmc.getInfoLabel("VideoPlayer.SubtitlesLanguage")
+        fps = float(xbmc.getInfoLabel("Player.Process(VideoFPS)"))
+        encoding = find_encoding_by_country(
+            xbmc.convertLanguage(lang, xbmc.ISO_639_1))
+
+        subs = pysubs2.load(path, encoding, fps=fps)
+        subs.save(converted, encoding, fps=fps, header_notice=self._header.format(path))
+        self._download_subtitle(converted)
+
+    def run(self):
+        # Make sure the manual search button is disabled
+        if xbmc.getCondVisibility("Window.IsActive(subtitlesearch)"):
+            window = xbmcgui.Window(10153)
+            window.getControl(160).setEnableCondition(
+                '!String.IsEqual(Control.GetLabel(100),"{}")'.format(
+                    self._name))
+
+        if get_setting("subtitles.overrideassfonts"):
+            xbmcgui.Dialog().notification(self._translate(32000), self._translate(32001))
+
+        self._handle = int(sys.argv[1])
+        self._params = dict(parse_qsl(sys.argv[2][1:]))
+
+        if "action" in self._params:
+            if self._params["action"] in ["search", "manualsearch"]:
+                self._list_subtitles()
+            elif self._params["action"] == "download" and "path" in self._params:
+                self._download_subtitle(self._params["path"])
+            elif self._params["action"] == "convert" and "path" in self._params:
+                self._convert_subtitle(self._params["path"])
+
+        xbmcplugin.endOfDirectory(self._handle)

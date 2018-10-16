@@ -1,3 +1,3 @@
-from lib.customizer import run
+from lib.customizer import Customizer
 
-run()
+Customizer().run()

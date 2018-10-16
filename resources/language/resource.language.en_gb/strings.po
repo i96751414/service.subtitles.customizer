@@ -25,3 +25,11 @@ msgid "Warning"
 msgctxt "#32001"
 msgid "ASS/SSA fonts are currently being ignored. Using default font instead..."
 ""
+
+msgctxt "#32002"
+msgid "Original subtitle"
+""
+
+msgctxt "#32003"
+msgid "Customize subtitle"
+""
