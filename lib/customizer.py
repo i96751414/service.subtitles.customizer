@@ -94,8 +94,8 @@ def get_current_subtitle():
         m_time = os.path.getmtime(subtitles[0])
         index = 0
 
-        for i, sub in enumerate(subtitles, 1):
-            _m_time = os.path.getmtime(sub)
+        for i in range(1, len(subtitles)):
+            _m_time = os.path.getmtime(subtitles[i])
             if _m_time > m_time:
                 m_time = _m_time
                 index = i
