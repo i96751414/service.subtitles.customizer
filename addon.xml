@@ -18,10 +18,10 @@
         <forum></forum>
         <website>https://github.com/i96751414/service.subtitles.customizer</website>
         <assets>
-            <icon>resources/media/os_logo_512x512.png</icon>
-            <screenshot>resources/media/screenshot_1.jpg</screenshot>
-            <screenshot>resources/media/screenshot_2.jpg</screenshot>
-            <screenshot>resources/media/screenshot_3.jpg</screenshot>
+            <icon>icon.png</icon>
+            <screenshot>resources/img/screenshot_1.jpg</screenshot>
+            <screenshot>resources/img/screenshot_2.jpg</screenshot>
+            <screenshot>resources/img/screenshot_3.jpg</screenshot>
         </assets>
         <source>https://github.com/i96751414/service.subtitles.customizer</source>
     </extension>
