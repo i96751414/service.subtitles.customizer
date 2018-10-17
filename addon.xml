@@ -19,9 +19,10 @@
         <website>https://github.com/i96751414/service.subtitles.customizer</website>
         <assets>
             <icon>icon.png</icon>
-            <screenshot>resources/img/screenshot_1.jpg</screenshot>
-            <screenshot>resources/img/screenshot_2.jpg</screenshot>
-            <screenshot>resources/img/screenshot_3.jpg</screenshot>
+            <screenshot>resources/img/screenshot_1.png</screenshot>
+            <screenshot>resources/img/screenshot_2.png</screenshot>
+            <screenshot>resources/img/screenshot_3.png</screenshot>
+            <screenshot>resources/img/screenshot_4.png</screenshot>
         </assets>
         <source>https://github.com/i96751414/service.subtitles.customizer</source>
     </extension>
