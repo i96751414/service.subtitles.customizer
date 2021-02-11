@@ -1,14 +1,17 @@
-import os
-import re
-import sys
-import xbmc
+import codecs
+import encodings
 import json
 import locale
-import codecs
-import xbmcgui
-import encodings
+import os
+import re
+import shutil
+import sys
+
+import xbmc
 import xbmcaddon
+import xbmcgui
 import xbmcplugin
+
 from lib import pysubs2
 from lib.pysubs2.formats import FILE_EXTENSION_TO_FORMAT_IDENTIFIER
 
@@ -21,13 +24,17 @@ except ImportError:
     from urllib import urlencode
 
 SUBTITLES_EXT = FILE_EXTENSION_TO_FORMAT_IDENTIFIER.keys()
-EXT_RE = re.compile("({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
-LANG_RE = re.compile("[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
+EXT_RE = re.compile(r"({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
+LANG_RE = re.compile(r"[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
+
+
+def execute_json_rpc(method, rpc_version="2.0", rpc_id=1, **params):
+    return json.loads(xbmc.executeJSONRPC(json.dumps(dict(
+        jsonrpc=rpc_version, method=method, params=params, id=rpc_id))))
 
 
 def get_active_players():
-    command = '{"jsonrpc": "2.0", "method": "Player.GetActivePlayers", "id": 1}'
-    return json.loads(xbmc.executeJSONRPC(command))["result"]
+    return execute_json_rpc("Player.GetActivePlayers")["result"]
 
 
 def get_subtitle_details():
@@ -41,25 +48,16 @@ def get_subtitle_details():
     if player_id is None:
         return None
 
-    command = ('{{"jsonrpc":"2.0","method":"Player.GetProperties",'
-               '"params":{{"playerid":{},"properties":["subtitleenabled","currentsubtitle"]}},'
-               '"id":1}}').format(player_id)
-
-    data = json.loads(xbmc.executeJSONRPC(command))["result"]
+    data = execute_json_rpc(
+        "Player.GetProperties", playerid=player_id, properties=("subtitleenabled", "currentsubtitle"))["result"]
     return data["currentsubtitle"] if data["subtitleenabled"] else None
 
 
 def get_setting(name):
-    command = ('{{"jsonrpc": "2.0", "id": 1, '
-               '"method": "Settings.GetSettingValue", '
-               '"params": {{"setting": "{}"}}}}').format(name)
-    result = xbmc.executeJSONRPC(command)
-    data = json.loads(result)
-
+    data = execute_json_rpc("Settings.GetSettingValue", setting=name)
     if "result" in data and "value" in data["result"]:
         return data["result"]["value"]
-    else:
-        raise ValueError
+    raise ValueError("Unable to get setting " + name)
 
 
 def get_current_subtitle():
@@ -122,11 +120,10 @@ class Customizer(object):
         self._id = self._addon.getAddonInfo("id")
 
         self._header = u"[" + self._name + "] original_sub <{}>"
-        self._header_re = re.compile("\[{}\] original_sub <(.+?)>".format(self._name))
+        self._header_re = re.compile(r"\[{}] original_sub <(.+?)>".format(self._name))
 
         self._subtitles_dir = os.path.normpath(os.path.join(
-            xbmc.translatePath(self._addon.getAddonInfo("profile")),
-            "subtitles"))
+            xbmc.translatePath(self._addon.getAddonInfo("profile")), "subtitles"))
         if not os.path.exists(self._subtitles_dir):
             os.makedirs(self._subtitles_dir)
 
@@ -137,53 +134,39 @@ class Customizer(object):
         return self._addon.getLocalizedString(text).encode("utf-8")
 
     def _add_subtitle(self, action, path, label, language):
-        list_item = xbmcgui.ListItem(
-            label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME),
-            label2=label,
-            iconImage="0",
-            thumbnailImage=xbmc.convertLanguage(language, xbmc.ISO_639_1),
-        )
-
+        list_item = xbmcgui.ListItem(label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME), label2=label)
+        list_item.setArt({"icon": "0", "thumb": xbmc.convertLanguage(language, xbmc.ISO_639_1)})
         # list_item.setProperty("sync", "false")
         # list_item.setProperty("hearing_imp", "false")
-
-        url = "plugin://{}/?{}".format(self._id, urlencode({
-            "action": action, "path": path, "language": language}))
-
-        xbmcplugin.addDirectoryItem(
-            handle=self._handle,
-            url=url,
-            listitem=list_item,
-            isFolder=False,
-        )
+        url = "plugin://{}/?{}".format(self._id, urlencode(dict(action=action, path=path, language=language)))
+        xbmcplugin.addDirectoryItem(self._handle, url, list_item)
 
     def _list_subtitles(self):
-        path, lang = get_current_subtitle()
-        if path is None:
+        current_path, lang = get_current_subtitle()
+        if current_path is None:
             return
 
-        if path.endswith(".ass"):
-            with codecs.open(path, errors="ignore") as f:
+        xbmc.log("Current subtitle path is: " + current_path)
+        if current_path.endswith(".ass"):
+            with codecs.open(current_path, errors="ignore") as f:
                 for line in f:
                     match = self._header_re.search(line)
                     if match:
-                        path = match.group(1)
+                        current_path = match.group(1)
+                        xbmc.log("Original subtitle path is: " + current_path)
                         break
 
+        subtitle_path = os.path.join(self._subtitles_dir, os.path.basename(current_path))
+        if current_path != subtitle_path:
+            shutil.copy(current_path, subtitle_path)
+
         title = xbmc.getInfoLabel("Player.Title")
-        self._add_subtitle(
-            "download", path, "{} - {}".format(title, self._translate(32002)), lang)
-        self._add_subtitle(
-            "convert", path, "{} - {}".format(title, self._translate(32003)), lang)
+        self._add_subtitle("download", subtitle_path, "{} - {}".format(title, self._translate(32002)), lang)
+        self._add_subtitle("convert", subtitle_path, "{} - {}".format(title, self._translate(32003)), lang)
 
     def _download_subtitle(self, path):
         list_item = xbmcgui.ListItem(label=path)
-        xbmcplugin.addDirectoryItem(
-            handle=self._handle,
-            url=path,
-            listitem=list_item,
-            isFolder=False,
-        )
+        xbmcplugin.addDirectoryItem(self._handle, path, list_item)
 
     def _convert_subtitle(self, path):
         dialog = xbmcgui.Dialog()
@@ -191,13 +174,11 @@ class Customizer(object):
             self._addon.openSettings()
 
         name, _ = os.path.splitext(os.path.basename(path))
-        converted = os.path.join(self._subtitles_dir, "{}_modified_{}.ass".format(
-            self._name, name))
+        converted = os.path.join(self._subtitles_dir, "{}_modified_{}.ass".format(self._name, name))
 
         lang = xbmc.getInfoLabel("VideoPlayer.SubtitlesLanguage")
         fps = float(xbmc.getInfoLabel("Player.Process(VideoFPS)"))
-        encoding = find_encoding_by_country(
-            xbmc.convertLanguage(lang, xbmc.ISO_639_1))
+        encoding = find_encoding_by_country(xbmc.convertLanguage(lang, xbmc.ISO_639_1))
 
         subs = pysubs2.load(path, encoding, fps=fps)
 
@@ -307,9 +288,7 @@ class Customizer(object):
         # Make sure the manual search button is disabled
         if xbmc.getCondVisibility("Window.IsActive(subtitlesearch)"):
             window = xbmcgui.Window(10153)
-            window.getControl(160).setEnableCondition(
-                '!String.IsEqual(Control.GetLabel(100),"{}")'.format(
-                    self._name))
+            window.getControl(160).setEnableCondition('!String.IsEqual(Control.GetLabel(100),"{}")'.format(self._name))
 
         if get_setting("subtitles.overrideassfonts"):
             xbmcgui.Dialog().notification(self._translate(32000), self._translate(32001))
