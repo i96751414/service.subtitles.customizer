@@ -23,6 +23,7 @@ except ImportError:
     # noinspection PyUnresolvedReferences
     from urllib import urlencode
 
+PY3 = sys.version_info.major >= 3
 SUBTITLES_EXT = FILE_EXTENSION_TO_FORMAT_IDENTIFIER.keys()
 EXT_RE = re.compile(r"({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
 LANG_RE = re.compile(r"[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
@@ -131,7 +132,10 @@ class Customizer(object):
         self._params = {}
 
     def _translate(self, text):
-        return self._addon.getLocalizedString(text).encode("utf-8")
+        string = self._addon.getLocalizedString(text)
+        if not PY3:
+            string = string.encode("utf-8")
+        return string
 
     def _add_subtitle(self, action, path, label, language):
         list_item = xbmcgui.ListItem(label=xbmc.convertLanguage(language, xbmc.ENGLISH_NAME), label2=label)
