@@ -1,5 +1,7 @@
 ![logo](https://github.com/i96751414/service.subtitles.customizer/raw/master/resources/img/logo_noshadow.png)
 
+[![Build Status](https://github.com/i96751414/service.subtitles.customizer/workflows/build/badge.svg)](https://github.com/i96751414/service.subtitles.customizer/actions?query=workflow%3Abuild)
+
 Subtitle customizer for Kodi. With it you can convert the current subtitle and change it's style, among other things.
 In case you don't like the converted subtitle, you can always set the original subtitle again.
 
