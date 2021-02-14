@@ -42,5 +42,5 @@ class JSONFormat(FormatBase):
         if PY3:
             json.dump(data, fp)
         else:
-            text = json.dumps(data, fp)
+            text = json.dumps(data)
             fp.write(unicode(text))
