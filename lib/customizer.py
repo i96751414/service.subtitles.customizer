@@ -28,6 +28,19 @@ SUBTITLES_EXT = FILE_EXTENSION_TO_FORMAT_IDENTIFIER.keys()
 EXT_RE = re.compile(r"({})$".format("|".join(SUBTITLES_EXT)), re.IGNORECASE)
 LANG_RE = re.compile(r"[.-]([^.-]*)(?:[.-]forced)?\.([^.]+)$", re.IGNORECASE)
 
+if PY3:
+    def str_to_unicode(s):
+        return s
+
+    def unicode_to_str(s):
+        return s
+else:
+    def str_to_unicode(s):
+        return s.decode("utf-8")
+
+    def unicode_to_str(s):
+        return s.encode("utf-8")
+
 
 def execute_json_rpc(method, rpc_version="2.0", rpc_id=1, **params):
     return json.loads(xbmc.executeJSONRPC(json.dumps(dict(
@@ -66,12 +79,12 @@ def get_current_subtitle():
         return None, None
 
     if get_setting("subtitles.storagemode") == 1:
-        subtitle_path = get_setting("subtitles.custompath")
+        subtitle_path = str_to_unicode(get_setting("subtitles.custompath"))
     else:
-        subtitle_path = xbmc.getInfoLabel("Player.Folderpath")
+        subtitle_path = str_to_unicode(xbmc.getInfoLabel("Player.Folderpath"))
 
     if not os.path.exists(subtitle_path):
-        subtitle_path = xbmc.translatePath("special://temp")
+        subtitle_path = str_to_unicode(xbmc.translatePath("special://temp"))
 
     subtitle_lang = xbmc.getInfoLabel("VideoPlayer.SubtitlesLanguage")
     file_name = unquote(xbmc.getInfoLabel("Player.Filename"))
@@ -123,8 +136,8 @@ class Customizer(object):
         self._header = u"[" + self._name + "] original_sub <{}>"
         self._header_re = re.compile(r"\[{}] original_sub <(.+?)>".format(self._name))
 
-        self._subtitles_dir = os.path.normpath(os.path.join(
-            xbmc.translatePath(self._addon.getAddonInfo("profile")), "subtitles"))
+        self._subtitles_dir = str_to_unicode(os.path.normpath(os.path.join(
+            xbmc.translatePath(self._addon.getAddonInfo("profile")), "subtitles")))
         if not os.path.exists(self._subtitles_dir):
             os.makedirs(self._subtitles_dir)
 
@@ -142,7 +155,8 @@ class Customizer(object):
         list_item.setArt({"icon": "0", "thumb": xbmc.convertLanguage(language, xbmc.ISO_639_1)})
         # list_item.setProperty("sync", "false")
         # list_item.setProperty("hearing_imp", "false")
-        url = "plugin://{}/?{}".format(self._id, urlencode(dict(action=action, path=path, language=language)))
+        url = "plugin://{}/?{}".format(self._id, urlencode(dict(
+            action=action, path=unicode_to_str(path), language=language)))
         xbmcplugin.addDirectoryItem(self._handle, url, list_item)
 
     def _list_subtitles(self):
@@ -150,14 +164,14 @@ class Customizer(object):
         if current_path is None:
             return
 
-        xbmc.log("Current subtitle path is: " + current_path)
+        xbmc.log("Current subtitle path is: " + unicode_to_str(current_path))
         if current_path.endswith(".ass"):
             with codecs.open(current_path, errors="ignore") as f:
                 for line in f:
                     match = self._header_re.search(line)
                     if match:
                         current_path = match.group(1)
-                        xbmc.log("Original subtitle path is: " + current_path)
+                        xbmc.log("Original subtitle path is: " + unicode_to_str(current_path))
                         break
 
         subtitle_path = os.path.join(self._subtitles_dir, os.path.basename(current_path))
@@ -304,8 +318,8 @@ class Customizer(object):
             if self._params["action"] in ["search", "manualsearch"]:
                 self._list_subtitles()
             elif self._params["action"] == "download" and "path" in self._params:
-                self._download_subtitle(self._params["path"])
+                self._download_subtitle(str_to_unicode(self._params["path"]))
             elif self._params["action"] == "convert" and "path" in self._params:
-                self._convert_subtitle(self._params["path"])
+                self._convert_subtitle(str_to_unicode(self._params["path"]))
 
         xbmcplugin.endOfDirectory(self._handle)
